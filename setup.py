@@ -5,16 +5,14 @@ setup(
     version='0.1',
     description='beets plugin to support user defined keyword tags',
     long_description=open('README.md').read(),
-    author='Ingo Fruend',
-    author_email='github@ingofruend.net',
-    url='https://github.com/igordertigor/beets-usertag',
+    author='Edgars Supe',
+    author_email='',
+    url='https://github.com/edgars-supe/beets-usertag',
     license='MIT',
     platforms='ALL',
-
     packages=['beetsplug'],
-
     install_requires=[
-        'beets>=1.3.7',
-        'futures;python_version<"3.2"',
+        'beets>=1.6.0'
     ],
+    python_requires=">=3.7"
 )
