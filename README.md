@@ -76,11 +76,3 @@ beet list [-a] usertags:<tag>
 
 Query user tags as you would query any other field with the standard `list`
 command. Add the `-a` flag to list user-tagged albums.
-
-## Roadmap
-
-There are several improvements I want to make to this plugin:
-- [ ] Add confirmation prompt argument, which will print the tracks/albums that
-will be affected by the given command if continued.
-- [ ] Add unit-tests.
-- [ ] Add ability to automatically tag tracks/albums on import.
