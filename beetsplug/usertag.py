@@ -23,7 +23,7 @@ copyright 2015 by Ingo Fruend (github@ingofruend.net)
 from __future__ import (division, absolute_import, print_function,
                         unicode_literals)
 
-# TODO: tests
+from beets.library import LibModel, Item, Album
 
 from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand
@@ -46,7 +46,10 @@ def add_usertag(lib, opts, args):
         if '' in usertags:
             usertags.pop(usertags.index(''))
         item.update({'usertags': '|'.join(usertags)})
-        item.store()
+        if isinstance(item, Item):
+            item.store()
+        elif isinstance(item, Album):
+            item.store(inherit=False)
         print('Added tags\n   {}'.format(item))
 add_tag_command = Subcommand(
     'addtag',
@@ -83,7 +86,10 @@ def remove_usertag(lib, opts, args):
             item.update({'usertags': '|'.join(usertags)})
         else:
             item.update({'usertags': None})
-        item.store()
+        if isinstance(item, Item):
+            item.store()
+        elif isinstance(item, Album):
+            item.store(inherit=False)
         print('Removed tags {}\n    {}'.format(deltags, item))
 rm_tag_command = Subcommand('rmtag',
                             help='remove user defined tag',
@@ -108,7 +114,10 @@ def clear_usertags(lib, opts, args):
     items = _get_items(lib, opts, args)
     for item in items:
         item.update({'usertags': None})
-        item.store()
+        if isinstance(item, Item):
+            item.store()
+        elif isinstance(item, Album):
+            item.store(inherit=False)
 clear_tags_command = Subcommand('cleartags',
                                 help='remove ALL user-defined tags from tracks')
 clear_tags_command.parser.add_option(
@@ -139,7 +148,7 @@ list_tags_command.parser.add_option(
 list_tags_command.func = list_usertags
 
 
-def _get_items(lib, opts, args):
+def _get_items(lib, opts, args) -> [LibModel]:
     if opts.album:
         return lib.albums(args)
     else:
@@ -148,6 +157,7 @@ def _get_items(lib, opts, args):
 
 class UserTagsPlugin(BeetsPlugin):
     """UserTags plugin to support user defined tags"""
+    FIELD = 'usertags'
     item_types = {'usertags': types.STRING}
 
     def __init__(self):
