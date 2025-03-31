@@ -157,6 +157,7 @@ def _get_items(lib, opts, args) -> [LibModel]:
 
 class UserTagsPlugin(BeetsPlugin):
     """UserTags plugin to support user defined tags"""
+    FIELD = 'usertags'
     item_types = {'usertags': types.STRING}
 
     def __init__(self):
