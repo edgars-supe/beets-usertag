@@ -1,11 +1,12 @@
+import unittest
 from typing import Union
 
 from beetsplug.usertag import UserTagsPlugin, add_usertag, clear_usertags, remove_usertag
 from beets.library import Album, Item, LibModel
-from beets.test.helper import PluginTestCase
+from beets.test.helper import TestHelper
 from optparse import Values
 
-class UserTagsTest(PluginTestCase):
+class UserTagsTest(TestHelper, unittest.TestCase):
     _ITEMTAG = 'itemtag'
     _ALBUMTAG = 'albumtag'
 
@@ -13,7 +14,7 @@ class UserTagsTest(PluginTestCase):
     album_opts = Values({'album': True, 'tags': [_ALBUMTAG]})
 
     def setUp(self):
-        super().setUp()
+        super().setup_beets(disk=False)
         self._create_items()
 
     def test_adding_tag_item(self):
