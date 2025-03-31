@@ -14,7 +14,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
     album_opts = Values({'album': True, 'tags': [_ALBUMTAG]})
 
     def setUp(self):
-        super().setup_beets(disk=False)
+        super().setup_beets()
         self._create_items()
 
     def test_adding_tag_item(self):
