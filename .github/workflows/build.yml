@@ -30,6 +30,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install pytest
         pip install beets==${{ matrix.beets }}
+        pip install responses
         pip install -e ./
     - name: Run tests
       run: pytest --junit-xml=test-results.xml
