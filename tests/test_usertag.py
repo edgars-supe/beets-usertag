@@ -1,7 +1,7 @@
 import unittest
 from typing import Union
 
-from beetsplug.usertag import UserTagsPlugin, clear_usertags, remove_usertag
+from beetsplug.usertag import UserTagsPlugin, clear_usertags
 from beets.library import Album, Item, LibModel
 from beets.test.helper import TestHelper
 from optparse import Values
@@ -56,7 +56,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, self._ITEMTAG)
 
-        remove_usertag(self.lib, self.item_opts, self.item.title)
+        self.subject.remove_tags(self.lib, self.item_opts, self.item.title)
 
         self.subject.add_tags(self.lib, self.item_opts, self.item.title)
         item = self.lib.get_item(self.item.id)
@@ -70,7 +70,6 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected='baa|bab|bac|bad|bae|baf')
 
-
     # endregion
 
     # region Remove
@@ -81,7 +80,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected=self._ITEMTAG)
 
-        remove_usertag(self.lib, self.item_opts, self.item.title)
+        self.subject.remove_tags(self.lib, self.item_opts, self.item.title)
         item = self.lib.get_item(item.id)
         self._assert_user_tags(item, expected=None)
 
@@ -91,7 +90,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         album = self.lib.get_album(self.album.id)
         self._assert_user_tags(album, expected=self._ALBUMTAG)
 
-        remove_usertag(self.lib, self.album_opts, self.album.album)
+        self.subject.remove_tags(self.lib, self.album_opts, self.album.album)
         album = self.lib.get_album(self.album.id)
         self._assert_user_tags(album, expected=None)
 
@@ -101,7 +100,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         self.subject.add_tags(self.lib, _item_opts, self.item.title)
         self.subject.add_tags(self.lib, _album_opts, self.album.album)
 
-        remove_usertag(self.lib, _item_opts, self.item.title)
+        self.subject.remove_tags(self.lib, _item_opts, self.item.title)
 
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected=None)
@@ -114,12 +113,30 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         self.subject.add_tags(self.lib, _item_opts, self.item.title)
         self.subject.add_tags(self.lib, _album_opts, self.album.album)
 
-        remove_usertag(self.lib, _album_opts, self.album.album)
+        self.subject.remove_tags(self.lib, _album_opts, self.album.album)
 
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected='foo')
         album = self.lib.get_album(self.album.id)
         self._assert_user_tags(album, expected=None)
+
+    def test_removing_subset(self):
+        _item_opts = Values({'album': False, 'tags': ['baa', 'bab', 'bac', 'bad']})
+        self.subject.add_tags(self.lib, _item_opts, self.item.title)
+
+        _item_opts.tags = ['baa', 'bac']
+        self.subject.remove_tags(self.lib, _item_opts, self.item.title)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected='bab|bad')
+
+    def test_invalid_tags_are_stripped_when_removing(self):
+        _item_opts = Values(
+            {'album': False, 'tags': ['baa', '', 'bab', ' ', 'bac', '   ', 'bad', '\t', 'bae', '	', 'baf']})
+        self.subject.add_tags(self.lib, _item_opts, self.item.title)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected='baa|bab|bac|bad|bae|baf')
 
     # endregion
 

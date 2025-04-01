@@ -29,45 +29,6 @@ from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand
 from beets.dbcore import types
 
-def remove_usertag(lib, opts, args):
-    """Remove a usertag"""
-    items = _get_items(lib, opts, args)
-    deltags = opts.tags
-    for item in items:
-        usertags = item.get('usertags', None)
-        if usertags is None:
-            return
-        usertags = item['usertags'].split('|')
-        for tag in deltags:
-            idx = usertags.index(tag)
-            usertags.pop(idx)
-        if len(usertags):
-            item.update({'usertags': '|'.join(usertags)})
-        else:
-            item.update({'usertags': None})
-        if isinstance(item, Item):
-            item.store()
-        elif isinstance(item, Album):
-            item.store(inherit=False)
-        print('Removed tags {}\n    {}'.format(deltags, item))
-rm_tag_command = Subcommand('rmtag',
-                            help='remove user defined tag',
-                            aliases=('rmt',))
-rm_tag_command.func = remove_usertag
-rm_tag_command.parser.add_option(
-    '--tag', '-t',
-    action='append', dest='tags',
-    help='Tag to remove. '
-    'Combine multiple tags by specifying this option repeatedly.')
-rm_tag_command.parser.add_option(
-    '--album', '-a',
-    action='store_true', default=False,
-    dest='album', help='remove tag only from albums'
-)
-rm_tag_command.parser.usage += '\n'\
-    'Example: beet rmtag artist:beatles -t favourites'
-
-
 def clear_usertags(lib, opts, args):
     """Clear all usertags"""
     items = _get_items(lib, opts, args)
@@ -124,26 +85,38 @@ class UserTagsPlugin(BeetsPlugin):
 
     def commands(self):
         return [self._create_add_command(),
-                rm_tag_command,
+                self._create_remove_command(),
                 clear_tags_command,
                 list_tags_command]
 
     def add_tags(self, lib, opts, args):
-        items = self._get_models(lib, opts.album, args)
+        models = self._get_models(lib, opts.album, args)
         new_tags = self._sanitize_tags(opts.tags)
         print("Adding tag(s) {} to:".format(', '.join(new_tags)))
-        for item in items:
-            tags = self._get_tags(item)
+        for model in models:
+            tags = self._get_tags(model)
             tags.extend(new_tags)
             tags = sorted(list(set(tags)))
-            item.update({self.FIELD: '|'.join(tags)})
-            self._update_model(item)
-            print("\t{}".format(item))
+            model.update({UserTagsPlugin.FIELD: '|'.join(tags)})
+            self._update_model(model)
+            print("\t{}".format(model))
+
+    def remove_tags(self, lib, opts, args):
+        models = self._get_models(lib, opts.album, args)
+        remove_tags: [str] = self._sanitize_tags(opts.tags)
+        print("Removing tag(s) {} from:".format(', '.join(remove_tags)))
+        for model in models:
+            tags = self._get_tags(model)
+            tags = [tag for tag in tags if tag not in remove_tags]
+            tags_field = '|'.join(tags) if tags else None
+            model.update({UserTagsPlugin.FIELD: tags_field})
+            self._update_model(model)
+            print('\t{}'.format(model))
 
     def _create_add_command(self):
         cmd = Subcommand(
             'addtag',
-            help='Add user defined tags.',
+            help='add user-defined tags',
             aliases='adt')
         cmd.func = self.add_tags
         cmd.parser.add_option(
@@ -154,6 +127,23 @@ class UserTagsPlugin(BeetsPlugin):
             '--album', '-a',
             action='store_true', default=False,
             dest='album', help='tag only albums'
+        )
+        return cmd
+
+    def _create_remove_command(self):
+        cmd = Subcommand(
+            'rmtag',
+            help='remove user-defined tags',
+            aliases='rmt')
+        cmd.func = self.remove_tags
+        cmd.parser.add_option(
+            '--tag', '-t',
+            action='append', dest='tags',
+            help='tag to remove; one tag per flag')
+        cmd.parser.add_option(
+            '--album', '-a',
+            action='store_true', default=False,
+            dest='album', help='remove tag only from albums'
         )
         return cmd
 
@@ -175,8 +165,9 @@ class UserTagsPlugin(BeetsPlugin):
         tags = model.get(self.FIELD, None)
         return tags.split('|') if tags else []
 
-    def _sanitize_tags(self, tags: [str]) -> [str]:
-        return [tag for tag in tags if self._is_tag_valid(tag)]
+    @staticmethod
+    def _sanitize_tags(tags: [str]) -> [str]:
+        return [tag for tag in tags if UserTagsPlugin._is_tag_valid(tag)]
 
     @staticmethod
     def _is_tag_valid(tag: str) -> bool:
