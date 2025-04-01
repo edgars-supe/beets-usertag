@@ -23,52 +23,11 @@ copyright 2015 by Ingo Fruend (github@ingofruend.net)
 from __future__ import (division, absolute_import, print_function,
                         unicode_literals)
 
-from beets.library import LibModel, Item, Album
+from beets.library import LibModel, Item, Album, Library
 
 from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand
 from beets.dbcore import types
-
-
-def add_usertag(lib, opts, args):
-    """Add a usertag"""
-    items = _get_items(lib, opts, args)
-    newtags = opts.tags
-    for item in items:
-        usertags = item.get('usertags', None)
-        if usertags is None:
-            usertags = []
-        else:
-            usertags = usertags.split('|')
-        # usertags.append(' '.join(newtags))
-        usertags.extend(newtags)
-        usertags = list(set(usertags))
-        if '' in usertags:
-            usertags.pop(usertags.index(''))
-        item.update({'usertags': '|'.join(usertags)})
-        if isinstance(item, Item):
-            item.store()
-        elif isinstance(item, Album):
-            item.store(inherit=False)
-        print('Added tags\n   {}'.format(item))
-add_tag_command = Subcommand(
-    'addtag',
-    help='Add user defined tags.',
-    aliases=('adt',))
-add_tag_command.func = add_usertag
-add_tag_command.parser.add_option(
-    '--tag', '-t',
-    action='append', dest='tags',
-    help='Tag to add. '
-    'Combine multiple tags by specifying this option repeatedly.')
-add_tag_command.parser.add_option(
-    '--album', '-a',
-    action='store_true', default=False,
-    dest='album', help='tag only albums'
-)
-add_tag_command.parser.usage += '\n'\
-    'Example: beet addtag artist:beatles -t favourites'
-
 
 def remove_usertag(lib, opts, args):
     """Remove a usertag"""
@@ -164,7 +123,61 @@ class UserTagsPlugin(BeetsPlugin):
         super(UserTagsPlugin, self).__init__()
 
     def commands(self):
-        return [add_tag_command,
+        return [self._create_add_command(),
                 rm_tag_command,
                 clear_tags_command,
                 list_tags_command]
+
+    def add_tags(self, lib, opts, args):
+        items = self._get_models(lib, opts.album, args)
+        new_tags = self._sanitize_tags(opts.tags)
+        print("Adding tag(s) {} to:".format(', '.join(new_tags)))
+        for item in items:
+            tags = self._get_tags(item)
+            tags.extend(new_tags)
+            tags = sorted(list(set(tags)))
+            item.update({self.FIELD: '|'.join(tags)})
+            self._update_model(item)
+            print("\t{}".format(item))
+
+    def _create_add_command(self):
+        cmd = Subcommand(
+            'addtag',
+            help='Add user defined tags.',
+            aliases='adt')
+        cmd.func = self.add_tags
+        cmd.parser.add_option(
+            '--tag', '-t',
+            action='append', dest='tags',
+            help='tag to add; one tag per flag')
+        cmd.parser.add_option(
+            '--album', '-a',
+            action='store_true', default=False,
+            dest='album', help='tag only albums'
+        )
+        return cmd
+
+    @staticmethod
+    def _get_models(lib: Library, album: bool, args: [str]) -> [LibModel]:
+        if album:
+            return lib.albums(args)
+        else:
+            return lib.items(args)
+
+    @staticmethod
+    def _update_model(model: LibModel) -> None:
+        if isinstance(model, Item):
+            model.store()
+        elif isinstance(model, Album):
+            model.store(inherit=False)
+
+    def _get_tags(self, model: LibModel) -> [str]:
+        tags = model.get(self.FIELD, None)
+        return tags.split('|') if tags else []
+
+    def _sanitize_tags(self, tags: [str]) -> [str]:
+        return [tag for tag in tags if self._is_tag_valid(tag)]
+
+    @staticmethod
+    def _is_tag_valid(tag: str) -> bool:
+        return bool(tag.strip())
