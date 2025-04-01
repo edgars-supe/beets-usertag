@@ -29,25 +29,6 @@ from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand
 from beets.dbcore import types
 
-def clear_usertags(lib, opts, args):
-    """Clear all usertags"""
-    items = _get_items(lib, opts, args)
-    for item in items:
-        item.update({'usertags': None})
-        if isinstance(item, Item):
-            item.store()
-        elif isinstance(item, Album):
-            item.store(inherit=False)
-clear_tags_command = Subcommand('cleartags',
-                                help='remove ALL user-defined tags from tracks')
-clear_tags_command.parser.add_option(
-    '--album', '-a',
-    action='store_true', default=False,
-    dest='album', help='remove user-defined tags from albums'
-)
-clear_tags_command.func = clear_usertags
-
-
 def list_usertags(lib, opts, args):
     items = _get_items(lib, opts, args)
     alltags = []
@@ -86,7 +67,7 @@ class UserTagsPlugin(BeetsPlugin):
     def commands(self):
         return [self._create_add_command(),
                 self._create_remove_command(),
-                clear_tags_command,
+                self._create_clear_command(),
                 list_tags_command]
 
     @staticmethod
@@ -123,6 +104,14 @@ class UserTagsPlugin(BeetsPlugin):
             self._update_model(model)
             print('\t{}'.format(model))
 
+    def clear_tags(self, lib, opts, args):
+        models = self._get_models(lib, opts.album, args)
+        print("Removing all tags from:")
+        for model in models:
+            model.update({UserTagsPlugin.FIELD: None})
+            self._update_model(model)
+            print("\t{}".format(model))
+
     def _create_add_command(self):
         cmd = Subcommand(
             'addtag',
@@ -155,6 +144,18 @@ class UserTagsPlugin(BeetsPlugin):
             action='store_true', default=False,
             dest='album', help='remove tag only from albums'
         )
+        return cmd
+
+    def _create_clear_command(self):
+        cmd = Subcommand(
+            'cleartags',
+            help='remove ALL user-defined tags from tracks')
+        cmd.parser.add_option(
+            '--album', '-a',
+            action='store_true', default=False,
+            dest='album', help='remove user-defined tags from albums'
+        )
+        cmd.func = self.clear_tags
         return cmd
 
     @staticmethod

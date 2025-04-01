@@ -1,7 +1,7 @@
 import unittest
 from typing import Union
 
-from beetsplug.usertag import UserTagsPlugin, clear_usertags
+from beetsplug.usertag import UserTagsPlugin
 from beets.library import Album, Item, LibModel
 from beets.test.helper import TestHelper
 from optparse import Values
@@ -169,7 +169,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         self.subject.add_tags(self.lib, item_opts, self.item.title)
 
         clear_opts = _create_opts(album=False, tags=[])
-        clear_usertags(self.lib, clear_opts, self.item.title)
+        self.subject.clear_tags(self.lib, clear_opts, self.item.title)
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected=[])
 
@@ -178,7 +178,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         self.subject.add_tags(self.lib, album_opts, self.album.album)
 
         clear_opts = _create_opts(album=True, tags=[])
-        clear_usertags(self.lib, clear_opts, self.album.album)
+        self.subject.clear_tags(self.lib, clear_opts, self.album.album)
         album = self.lib.get_item(self.album.id)
         self._assert_user_tags(album, expected=[])
 
@@ -189,7 +189,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         self.subject.add_tags(self.lib, album_opts, self.album.album)
 
         clear_opts = _create_opts(album=False, tags=[])
-        clear_usertags(self.lib, clear_opts, self.item.title)
+        self.subject.clear_tags(self.lib, clear_opts, self.item.title)
         item = self.lib.get_item(self.item.id)
         album = self.lib.get_album(self.album.id)
         self._assert_user_tags(item, expected=[])
@@ -202,7 +202,7 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         self.subject.add_tags(self.lib, album_opts, self.album.album)
 
         clear_opts = _create_opts(album=True, tags=[])
-        clear_usertags(self.lib, clear_opts, self.album.album)
+        self.subject.clear_tags(self.lib, clear_opts, self.album.album)
         item = self.lib.get_item(self.item.id)
         album = self.lib.get_album(self.album.id)
         self._assert_user_tags(item, expected=['bar', 'foo'])
