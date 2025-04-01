@@ -29,32 +29,6 @@ from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand
 from beets.dbcore import types
 
-def list_usertags(lib, opts, args):
-    items = _get_items(lib, opts, args)
-    alltags = []
-    for item in items:
-        usertags = item.get('usertags', None)
-        if usertags:
-            alltags += usertags.split('|')
-    for tag in sorted(set(alltags)):
-        print(tag, len([True for t in alltags if t == tag]))
-list_tags_command = Subcommand('listtags',
-                               help='list all user-defined tags on tracks',
-                               aliases=('lst',))
-list_tags_command.parser.add_option(
-    '--album', '-a',
-    action='store_true', default=False,
-    dest='album', help='list all user-defined tags on albums'
-)
-list_tags_command.func = list_usertags
-
-
-def _get_items(lib, opts, args) -> [LibModel]:
-    if opts.album:
-        return lib.albums(args)
-    else:
-        return lib.items(args)
-
 
 class UserTagsPlugin(BeetsPlugin):
     """UserTags plugin to support user defined tags"""
@@ -68,7 +42,7 @@ class UserTagsPlugin(BeetsPlugin):
         return [self._create_add_command(),
                 self._create_remove_command(),
                 self._create_clear_command(),
-                list_tags_command]
+                self._create_list_command()]
 
     @staticmethod
     def get_tags(model: LibModel) -> [str]:
@@ -112,6 +86,14 @@ class UserTagsPlugin(BeetsPlugin):
             self._update_model(model)
             print("\t{}".format(model))
 
+    def list_tags(self, lib, opts, args):
+        models = self._get_models(lib, opts.album, args)
+        tags = []
+        for model in models:
+            tags += self.get_tags(model)
+        for tag in sorted(set(tags)):
+            print(tag, len([True for t in tags if t == tag]))
+
     def _create_add_command(self):
         cmd = Subcommand(
             'addtag',
@@ -150,12 +132,25 @@ class UserTagsPlugin(BeetsPlugin):
         cmd = Subcommand(
             'cleartags',
             help='remove ALL user-defined tags from tracks')
+        cmd.func = self.clear_tags
         cmd.parser.add_option(
             '--album', '-a',
             action='store_true', default=False,
             dest='album', help='remove user-defined tags from albums'
         )
-        cmd.func = self.clear_tags
+        return cmd
+
+    def _create_list_command(self):
+        cmd = Subcommand(
+            'listtags',
+            help='list all user-defined tags on tracks',
+            aliases='lst')
+        cmd.func = self.list_tags
+        cmd.parser.add_option(
+            '--album', '-a',
+            action='store_true', default=False,
+            dest='album', help='list all user-defined tags on albums'
+        )
         return cmd
 
     @staticmethod
