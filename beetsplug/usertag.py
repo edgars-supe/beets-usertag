@@ -89,12 +89,22 @@ class UserTagsPlugin(BeetsPlugin):
                 clear_tags_command,
                 list_tags_command]
 
+    @staticmethod
+    def get_tags(model: LibModel) -> [str]:
+        if isinstance(model, Item):
+            tags = model.get(UserTagsPlugin.FIELD, default=None, with_album=False)
+        elif isinstance(model, Album):
+            tags = model.get(UserTagsPlugin.FIELD, None)
+        else:
+            tags = None
+        return tags.split('|') if tags else []
+
     def add_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
         new_tags = self._sanitize_tags(opts.tags)
         print("Adding tag(s) {} to:".format(', '.join(new_tags)))
         for model in models:
-            tags = self._get_tags(model)
+            tags = self.get_tags(model)
             tags.extend(new_tags)
             tags = sorted(list(set(tags)))
             model.update({UserTagsPlugin.FIELD: '|'.join(tags)})
@@ -106,7 +116,7 @@ class UserTagsPlugin(BeetsPlugin):
         remove_tags: [str] = self._sanitize_tags(opts.tags)
         print("Removing tag(s) {} from:".format(', '.join(remove_tags)))
         for model in models:
-            tags = self._get_tags(model)
+            tags = self.get_tags(model)
             tags = [tag for tag in tags if tag not in remove_tags]
             tags_field = '|'.join(tags) if tags else None
             model.update({UserTagsPlugin.FIELD: tags_field})
@@ -160,10 +170,6 @@ class UserTagsPlugin(BeetsPlugin):
             model.store()
         elif isinstance(model, Album):
             model.store(inherit=False)
-
-    def _get_tags(self, model: LibModel) -> [str]:
-        tags = model.get(self.FIELD, None)
-        return tags.split('|') if tags else []
 
     @staticmethod
     def _sanitize_tags(tags: [str]) -> [str]:
