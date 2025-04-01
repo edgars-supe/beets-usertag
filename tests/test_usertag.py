@@ -70,6 +70,23 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected='baa|bab|bac|bad|bae|baf')
 
+    def test_repeated_tags_are_ignored(self):
+        _item_opts = Values({'album': False, 'tags': ['baa', 'bab', 'baa', 'bac', 'baa']})
+        self.subject.add_tags(self.lib, _item_opts, self.item.title)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected='baa|bab|bac')
+
+    def test_adding_existing_tags(self):
+        _item_opts = Values({'album': False, 'tags': ['baa', 'bab', 'bac']})
+        self.subject.add_tags(self.lib, _item_opts, self.item.title)
+
+        _item_opts.tags = ['baa', 'bad', 'bae', 'bab']
+        self.subject.add_tags(self.lib, _item_opts, self.item.title)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected='baa|bab|bac|bad|bae')
+
     # endregion
 
     # region Remove
