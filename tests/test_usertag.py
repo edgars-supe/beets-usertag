@@ -190,7 +190,6 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected=[])
 
-
     @patch('beets.ui.input_yn', return_value=False)
     def test_removing_prompt_no(self, mock):
         self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
@@ -199,6 +198,11 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected=[_ITEM_TAG])
 
+    @patch.object(Library, 'items')
+    def test_check_valid_tags_when_removing(self, mock_items_query):
+        item_opts = _create_opts(album=False, tags=['', ' ', '   ', '\t', '	'])
+        self.subject.remove_tags(self.lib, item_opts, self.item.title)
+        mock_items_query.assert_not_called()
 
     # endregion
 
