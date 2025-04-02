@@ -99,4 +99,13 @@ beet list [-a] usertags:<tag>
 ```
 
 Query user tags as you would query any other field with the standard `list`
-command. Add the `-a` flag to list user-tagged albums.
+command. This will list all tracks/albums that have the given tag set. Add the `-a` flag to list user-tagged albums.
+
+---
+
+```
+beet list <query> -f '$title - $usertags'
+```
+
+Using `list` like this will return the tracks matching `query` and print out their titles and the usertags that have
+been set on them.
