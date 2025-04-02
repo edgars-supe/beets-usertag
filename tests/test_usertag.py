@@ -1,10 +1,11 @@
 import unittest
-from typing import Union
+from copy import deepcopy
 
 from beetsplug.usertag import UserTagsPlugin
 from beets.library import Album, Item, LibModel
 from beets.test.helper import TestHelper
 from optparse import Values
+from unittest.mock import patch
 
 _ITEM_TAG = 'item_tag'
 _ALBUM_TAG = 'album_tag'
@@ -13,6 +14,7 @@ def _create_opts(album: bool, tags: [str], prompt: bool=False) -> Values:
     return Values({'album': album, 'tags': tags, 'prompt': prompt})
 
 _ITEM_OPTS = _create_opts(album=False, tags=[_ITEM_TAG])
+_ITEM_OPTS_PROMPT = _create_opts(album=False, tags=[_ITEM_TAG], prompt=True)
 _ALBUM_OPTS = _create_opts(album=True, tags=[_ALBUM_TAG])
 
 class UserTagsTest(TestHelper, unittest.TestCase):
@@ -91,6 +93,20 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected=['baa', 'bab', 'bac', 'bad', 'bae'])
 
+    @patch('beets.ui.input_yn', return_value=True)
+    def test_adding_prompt_yes(self, mock):
+        self.subject.add_tags(self.lib, _ITEM_OPTS_PROMPT, self.item.title)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=[_ITEM_TAG])
+
+    @patch('beets.ui.input_yn', return_value=False)
+    def test_adding_prompt_no(self, mock):
+        self.subject.add_tags(self.lib, _ITEM_OPTS_PROMPT, self.item.title)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=[])
+
     # endregion
 
     # region Remove
@@ -160,6 +176,24 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected=['baa', 'bab', 'bac', 'bad', 'bae', 'baf'])
 
+    @patch('beets.ui.input_yn', return_value=True)
+    def test_removing_prompt_yes(self, mock):
+        self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
+
+        self.subject.remove_tags(self.lib, _ITEM_OPTS_PROMPT, self.item.title)
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=[])
+
+
+    @patch('beets.ui.input_yn', return_value=False)
+    def test_removing_prompt_no(self, mock):
+        self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
+
+        self.subject.remove_tags(self.lib, _ITEM_OPTS_PROMPT, self.item.title)
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=[_ITEM_TAG])
+
+
     # endregion
 
     # region Clear
@@ -207,6 +241,26 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         album = self.lib.get_album(self.album.id)
         self._assert_user_tags(item, expected=['bar', 'foo'])
         self._assert_user_tags(album, expected=[])
+
+    @patch('beets.ui.input_yn', return_value=True)
+    def test_clearing_prompt_yes(self, mock):
+        item_opts = _create_opts(album=False, tags=['foo', 'bar'])
+        self.subject.add_tags(self.lib, item_opts, self.item.title)
+
+        clear_opts = _create_opts(album=False, tags=[], prompt=True)
+        self.subject.clear_tags(self.lib, clear_opts, self.item.title)
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=[])
+
+    @patch('beets.ui.input_yn', return_value=False)
+    def test_clearing_prompt_no(self, mock):
+        item_opts = _create_opts(album=False, tags=['foo', 'bar'])
+        self.subject.add_tags(self.lib, item_opts, self.item.title)
+
+        clear_opts = _create_opts(album=False, tags=[], prompt=True)
+        self.subject.clear_tags(self.lib, clear_opts, self.item.title)
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=['bar', 'foo'])
 
     # endregion
 
