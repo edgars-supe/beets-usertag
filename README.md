@@ -33,42 +33,66 @@ described in more detail in the [beets documentation](https://beets.readthedocs.
 ### Adding tags
 
 ```
-beet addtag [-a] <query> -t <usertag> [-t <other-usertag>]
+beet addtag <query> -t <tag> [-t <other-tag>]
 ```
 
-Adds one (or more) usertags to the tracks matching the given query. Use the `-a`
-flag to tag albums instead. Tracks in the album will not be tagged.
+| Flag                      | Description                                                                                             |
+|---------------------------|---------------------------------------------------------------------------------------------------------|
+| `-t <tag>`, `--tag <tag>` | Tag(s) to add to items matching the given query. Additional tags require new flags.                     |
+| `-a`, `--album`           | (Optional) Whether the query should match albums instead of tracks. Tracks will not be changed.         |
+| `-p`, `--prompt`          | (Optional) If set, you will be shown the list of items that will be changed and asked for confirmation. |
 
 This command also has an alias - `adt`.
 
 ### Removing tags
 
 ```
-beet rmtag [-a] <query> -t <usertag>[ -t <other-usertag>]
+beet rmtag <query> -t <tag> [-t <other-tag>]
 ```
 
-Removes a usertag from the tracks matching the given query. Use the `-a` flag to
-remove a tag from an album. Tracks in the album will not be affected.
+| Flag                      | Description                                                                                             |
+|---------------------------|---------------------------------------------------------------------------------------------------------|
+| `-t <tag>`, `--tag <tag>` | Tag(s) to remove from items matching the given query. Additional tags require new flags.                |
+| `-a`, `--album`           | (Optional) Whether the query should match albums instead of tracks. Tracks will not be changed.         |
+| `-p`, `--prompt`          | (Optional) If set, you will be shown the list of items that will be changed and asked for confirmation. |
 
 This command also has an alias - `rmt`.
+
+---
 
 ```
 beet cleartags [-a] <query>
 ```
 
-Strips all usertags from the tracks matching the given query. Use the `-a` flag
-to strip all usertags from matching albums.
+| Flag                      | Description                                                                                             |
+|---------------------------|---------------------------------------------------------------------------------------------------------|
+| `-a`, `--album`           | (Optional) Whether the query should match albums instead of tracks. Tracks will not be changed.         |
+| `-p`, `--prompt`          | (Optional) If set, you will be shown the list of items that will be changed and asked for confirmation. |
 
 ### Listing tags
 
 ```
-beet listtags [-a]
+beet listtags [-a] <query>
 ```
 
-Lists all user-defined tags and a count of tracks that used those tags. Use the 
-`-a` flag to return user-defined tags and count for albums.
+| Flag                      | Description                                                                                     |
+|---------------------------|-------------------------------------------------------------------------------------------------|
+| `-a`, `--album`           | (Optional) Whether the query should match albums instead of tracks. Tracks will not be changed. |
+
+Lists all user-defined tags added to the items matching the given query and the number of items that have each tag.
+
+```
+> beet listtags Artist
+foo 1
+bar 5
+```
+
+The output means that out of the tracks matching the query `Artist` one has the tag `foo` and five tracks have the tag
+`bar`.
 
 This command also has an alias - `lst`.
+
+---
 
 ```
 beet list [-a] usertags:<tag>
