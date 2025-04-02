@@ -69,6 +69,7 @@ class UserTagsPlugin(BeetsPlugin):
             return
 
         models = self._get_models(lib, opts.album, args)
+        if not self._check_models(models, opts.album): return
 
         if not self._prompt_if_required(
                 opts, models,
@@ -93,6 +94,7 @@ class UserTagsPlugin(BeetsPlugin):
             return
 
         models = self._get_models(lib, opts.album, args)
+        if not self._check_models(models, opts.album): return
 
         if not self._prompt_if_required(
                 opts, models,
@@ -111,6 +113,7 @@ class UserTagsPlugin(BeetsPlugin):
 
     def clear_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
+        if not self._check_models(models, opts.album): return
 
         if not self._prompt_if_required(
                 opts, models,
@@ -126,6 +129,8 @@ class UserTagsPlugin(BeetsPlugin):
 
     def list_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
+        if not self._check_models(models, opts.album): return
+
         tags = []
         for model in models:
             tags += self.get_tags(model)
@@ -193,6 +198,14 @@ class UserTagsPlugin(BeetsPlugin):
             return lib.albums(args)
         else:
             return lib.items(args)
+
+    @staticmethod
+    def _check_models(models: [LibModel], album: bool) -> bool:
+        if not models:
+            print("Query returned no {}".format("albums" if album else "tracks"))
+            return False
+        else:
+            return True
 
     @staticmethod
     def _update_model(model: LibModel) -> None:
