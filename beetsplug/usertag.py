@@ -40,12 +40,16 @@ class UserTagsPlugin(BeetsPlugin):
 
     def __init__(self):
         super(UserTagsPlugin, self).__init__()
+        self._addtag_cmd = self._create_add_command()
+        self._rmtag_cmd = self._create_remove_command()
+        self._cleartags_cmd = self._create_clear_command()
+        self._listtags_cmd = self._create_list_command()
 
     def commands(self):
-        return [self._create_add_command(),
-                self._create_remove_command(),
-                self._create_clear_command(),
-                self._create_list_command()]
+        return [self._addtag_cmd,
+                self._rmtag_cmd,
+                self._cleartags_cmd,
+                self._listtags_cmd]
 
     @staticmethod
     def get_tags(model: LibModel) -> [str]:
@@ -58,14 +62,22 @@ class UserTagsPlugin(BeetsPlugin):
         return tags.split('|') if tags else []
 
     def add_tags(self, lib, opts, args):
+        new_tags = self._sanitize_tags(opts.tags or [])
+        if not new_tags:
+            print("Please specify at least one valid tag to add!\n")
+            self._addtag_cmd.print_help()
+            return
+
         models = self._get_models(lib, opts.album, args)
-        new_tags = self._sanitize_tags(opts.tags)
+        if not self._check_models(models, opts.album): return
+
         if not self._prompt_if_required(
                 opts, models,
                 prompt_text="This will add the tag(s) {} to the following {}:"
                         .format(', '.join(new_tags), "album(s)" if opts.album else "track(s)"),
                 default_text="Adding tag(s) {} to:".format(', '.join(new_tags))):
             return
+
         for model in models:
             tags = self.get_tags(model)
             tags.extend(new_tags)
@@ -75,14 +87,22 @@ class UserTagsPlugin(BeetsPlugin):
             if not opts.prompt: print("  {}".format(model))
 
     def remove_tags(self, lib, opts, args):
+        remove_tags: [str] = self._sanitize_tags(opts.tags or [])
+        if not remove_tags:
+            print("Please specify at least one valid tag to remove!\n")
+            self._rmtag_cmd.print_help()
+            return
+
         models = self._get_models(lib, opts.album, args)
-        remove_tags: [str] = self._sanitize_tags(opts.tags)
+        if not self._check_models(models, opts.album): return
+
         if not self._prompt_if_required(
                 opts, models,
                 prompt_text="This will remove the tag(s) {} from the following {}:"
                         .format(', '.join(remove_tags), "album(s)" if opts.album else "track(s)"),
                 default_text="Removing tag(s) {} from:".format(', '.join(remove_tags))):
             return
+
         for model in models:
             tags = self.get_tags(model)
             tags = [tag for tag in tags if tag not in remove_tags]
@@ -93,20 +113,24 @@ class UserTagsPlugin(BeetsPlugin):
 
     def clear_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
+        if not self._check_models(models, opts.album): return
+
         if not self._prompt_if_required(
                 opts, models,
                 prompt_text="This will remove ALL tags from the following {}:"
                         .format("album(s)" if opts.album else "track(s)"),
                 default_text="Removing ALL tags from:"):
             return
-        print("Removing all tags from:")
+
         for model in models:
             model.update({UserTagsPlugin.FIELD: None})
             self._update_model(model)
-            print("  {}".format(model))
+            if not opts.prompt: print("  {}".format(model))
 
     def list_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
+        if not self._check_models(models, opts.album): return
+
         tags = []
         for model in models:
             tags += self.get_tags(model)
@@ -174,6 +198,14 @@ class UserTagsPlugin(BeetsPlugin):
             return lib.albums(args)
         else:
             return lib.items(args)
+
+    @staticmethod
+    def _check_models(models: [LibModel], album: bool) -> bool:
+        if not models:
+            print("Query returned no {}".format("albums" if album else "tracks"))
+            return False
+        else:
+            return True
 
     @staticmethod
     def _update_model(model: LibModel) -> None:
