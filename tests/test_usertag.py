@@ -2,7 +2,7 @@ import unittest
 from copy import deepcopy
 
 from beetsplug.usertag import UserTagsPlugin
-from beets.library import Album, Item, LibModel
+from beets.library import Album, Item, LibModel, Library
 from beets.test.helper import TestHelper
 from optparse import Values
 from unittest.mock import patch
@@ -106,6 +106,12 @@ class UserTagsTest(TestHelper, unittest.TestCase):
 
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected=[])
+
+    @patch.object(Library, 'items')
+    def test_check_valid_tags_when_adding(self, mock_items_query):
+        item_opts = _create_opts(album=False, tags=['', ' ', '   ', '\t', '	'])
+        self.subject.add_tags(self.lib, item_opts, self.item.title)
+        mock_items_query.assert_not_called()
 
     # endregion
 
