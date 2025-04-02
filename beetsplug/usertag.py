@@ -23,6 +23,9 @@ copyright 2015 by Ingo Fruend (github@ingofruend.net)
 from __future__ import (division, absolute_import, print_function,
                         unicode_literals)
 
+from optparse import OptionParser
+
+import beets
 from beets.library import LibModel, Item, Album, Library
 
 from beets.plugins import BeetsPlugin
@@ -57,34 +60,50 @@ class UserTagsPlugin(BeetsPlugin):
     def add_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
         new_tags = self._sanitize_tags(opts.tags)
-        print("Adding tag(s) {} to:".format(', '.join(new_tags)))
+        if not self._prompt_if_required(
+                opts, models,
+                prompt_text="This will add the tag(s) {} to the following {}:"
+                        .format(', '.join(new_tags), "album(s)" if opts.album else "track(s)"),
+                default_text="Adding tag(s) {} to:".format(', '.join(new_tags))):
+            return
         for model in models:
             tags = self.get_tags(model)
             tags.extend(new_tags)
             tags = sorted(list(set(tags)))
             model.update({UserTagsPlugin.FIELD: '|'.join(tags)})
             self._update_model(model)
-            print("\t{}".format(model))
+            if not opts.prompt: print("  {}".format(model))
 
     def remove_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
         remove_tags: [str] = self._sanitize_tags(opts.tags)
-        print("Removing tag(s) {} from:".format(', '.join(remove_tags)))
+        if not self._prompt_if_required(
+                opts, models,
+                prompt_text="This will remove the tag(s) {} from the following {}:"
+                        .format(', '.join(remove_tags), "album(s)" if opts.album else "track(s)"),
+                default_text="Removing tag(s) {} from:".format(', '.join(remove_tags))):
+            return
         for model in models:
             tags = self.get_tags(model)
             tags = [tag for tag in tags if tag not in remove_tags]
             tags_field = '|'.join(tags) if tags else None
             model.update({UserTagsPlugin.FIELD: tags_field})
             self._update_model(model)
-            print('\t{}'.format(model))
+            if not opts.prompt: print('  {}'.format(model))
 
     def clear_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
+        if not self._prompt_if_required(
+                opts, models,
+                prompt_text="This will remove ALL tags from the following {}:"
+                        .format("album(s)" if opts.album else "track(s)"),
+                default_text="Removing ALL tags from:"):
+            return
         print("Removing all tags from:")
         for model in models:
             model.update({UserTagsPlugin.FIELD: None})
             self._update_model(model)
-            print("\t{}".format(model))
+            print("  {}".format(model))
 
     def list_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
@@ -100,15 +119,9 @@ class UserTagsPlugin(BeetsPlugin):
             help='add user-defined tags',
             aliases='adt')
         cmd.func = self.add_tags
-        cmd.parser.add_option(
-            '--tag', '-t',
-            action='append', dest='tags',
-            help='tag to add; one tag per flag')
-        cmd.parser.add_option(
-            '--album', '-a',
-            action='store_true', default=False,
-            dest='album', help='tag only albums'
-        )
+        self._add_tag_option(cmd.parser)
+        self._add_prompt_option(cmd.parser)
+        cmd.parser.add_album_option()
         return cmd
 
     def _create_remove_command(self):
@@ -117,15 +130,9 @@ class UserTagsPlugin(BeetsPlugin):
             help='remove user-defined tags',
             aliases='rmt')
         cmd.func = self.remove_tags
-        cmd.parser.add_option(
-            '--tag', '-t',
-            action='append', dest='tags',
-            help='tag to remove; one tag per flag')
-        cmd.parser.add_option(
-            '--album', '-a',
-            action='store_true', default=False,
-            dest='album', help='remove tag only from albums'
-        )
+        self._add_tag_option(cmd.parser)
+        self._add_prompt_option(cmd.parser)
+        cmd.parser.add_album_option()
         return cmd
 
     def _create_clear_command(self):
@@ -133,11 +140,8 @@ class UserTagsPlugin(BeetsPlugin):
             'cleartags',
             help='remove ALL user-defined tags from tracks')
         cmd.func = self.clear_tags
-        cmd.parser.add_option(
-            '--album', '-a',
-            action='store_true', default=False,
-            dest='album', help='remove user-defined tags from albums'
-        )
+        self._add_prompt_option(cmd.parser)
+        cmd.parser.add_album_option()
         return cmd
 
     def _create_list_command(self):
@@ -146,12 +150,23 @@ class UserTagsPlugin(BeetsPlugin):
             help='list all user-defined tags on tracks',
             aliases='lst')
         cmd.func = self.list_tags
-        cmd.parser.add_option(
-            '--album', '-a',
-            action='store_true', default=False,
-            dest='album', help='list all user-defined tags on albums'
-        )
+        cmd.parser.add_album_option()
         return cmd
+
+    @staticmethod
+    def _add_tag_option(parser: OptionParser):
+        parser.add_option(
+            '--tag', '-t',
+            action='append', dest='tags',
+            help='tag to add/remove; one tag per flag')
+
+    @staticmethod
+    def _add_prompt_option(parser: OptionParser):
+        parser.add_option(
+            '--prompt', '-p',
+            action='store_true', default=False,
+            dest='prompt', help='prompt user for confirmation before making changes'
+        )
 
     @staticmethod
     def _get_models(lib: Library, album: bool, args: [str]) -> [LibModel]:
@@ -174,3 +189,15 @@ class UserTagsPlugin(BeetsPlugin):
     @staticmethod
     def _is_tag_valid(tag: str) -> bool:
         return bool(tag.strip())
+
+    @staticmethod
+    def _prompt_if_required(opts, models: [LibModel], prompt_text: str, default_text: str) -> bool:
+        if opts.prompt:
+            print(prompt_text)
+            for model in models:
+                print("  {}".format(model))
+            if not beets.ui.input_yn("Continue? (Y/n)"):
+                return False
+        else:
+            print(default_text)
+        return True

@@ -9,8 +9,8 @@ from optparse import Values
 _ITEM_TAG = 'item_tag'
 _ALBUM_TAG = 'album_tag'
 
-def _create_opts(album: bool, tags: [str]) -> Values:
-    return Values({'album': album, 'tags': tags})
+def _create_opts(album: bool, tags: [str], prompt: bool=False) -> Values:
+    return Values({'album': album, 'tags': tags, 'prompt': prompt})
 
 _ITEM_OPTS = _create_opts(album=False, tags=[_ITEM_TAG])
 _ALBUM_OPTS = _create_opts(album=True, tags=[_ALBUM_TAG])
