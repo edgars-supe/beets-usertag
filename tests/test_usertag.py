@@ -1,5 +1,6 @@
 import unittest
-from copy import deepcopy
+
+import beets
 
 from beetsplug.usertag import UserTagsPlugin
 from beets.library import Album, Item, LibModel, Library
@@ -273,6 +274,49 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         self._assert_user_tags(item, expected=['bar', 'foo'])
 
     # endregion
+
+    # region Import
+
+    def test_album_tags_added_on_import(self):
+        self._init_config(auto = True, album_tags = ['baa', 'bab'], item_tags = ['bac', 'bad'])
+        self.subject._on_album_imported(self.lib, self.album)
+
+        album = self.lib.get_album(self.album.id)
+        self._assert_user_tags(album, expected=['baa', 'bab'])
+
+    def test_album_tags_not_added_on_import(self):
+        self._init_config(auto = False, album_tags = ['foo'])
+        self.subject._on_album_imported(self.lib, self.album)
+
+        album = self.lib.get_album(self.album.id)
+        self._assert_user_tags(album, expected=[])
+
+    def test_item_tags_added_on_import(self):
+        self._init_config(auto = True, album_tags = ['baa', 'bab'], item_tags = ['bac', 'bad'])
+        self.subject._on_item_imported(self.lib, self.item)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=['bac', 'bad'])
+
+    def test_item_tags_not_added_on_import(self):
+        self._init_config(auto=False, item_tags=['foo'])
+        self.subject._on_item_imported(self.lib, self.item)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=[])
+
+    def test_item_tags_added_when_album_imported(self):
+        self._init_config(auto = True, album_tags = ['baa', 'bab'], item_tags = ['bac', 'bad'])
+        self.subject._on_album_imported(self.lib, self.album)
+
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected=['bac', 'bad'])
+
+    # endregion
+
+    @staticmethod
+    def _init_config(auto: bool, album_tags: [str] = None, item_tags: [str] = None):
+        beets.config['usertag'].set({'auto': auto, 'album_tags': album_tags or [], 'item_tags': item_tags or []})
 
     def _create_items(self):
         self.item = self.add_item()
