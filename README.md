@@ -28,6 +28,30 @@ pip install git+https://github.com/edgars-supe/beets-usertag.git
 Then, add `usertag` to the list of plugins in beets' `config.yaml` file. This is
 described in more detail in the [beets documentation](https://beets.readthedocs.io/en/latest/plugins/index.html#using-plugins).
 
+## Configuration
+
+First, add the plugin to your beets configuration file.
+
+```
+plugins: [..] usertags
+```
+
+Then, add the configuration block. This is only required if you want to automatically add tags on import. The commands
+will work regardless of the settings here.
+
+```
+usertag:
+    auto: yes
+    album_tags: foo bar
+    item_tags: baz bax
+```
+
+The options are as follows:
+* `auto` - whether to add tags to albums and tracks on import. Possible values: `yes`, `no`. Default: `no`.
+* `album_tags` - list of tags to add to albums. Default: none.
+* `item_tags` - list of tags to add to items (tracks). These will be added to individual items in albums as well as
+     singleton items. Default: none.
+
 ## Usage
 
 ### Adding tags

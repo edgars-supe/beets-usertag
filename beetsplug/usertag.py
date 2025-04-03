@@ -37,6 +37,7 @@ class UserTagsPlugin(BeetsPlugin):
     """UserTags plugin to support user defined tags"""
     FIELD = 'usertags'
     item_types = {'usertags': types.STRING}
+    album_types = {'usertags': types.STRING}
 
     def __init__(self):
         super(UserTagsPlugin, self).__init__()
@@ -44,6 +45,9 @@ class UserTagsPlugin(BeetsPlugin):
         self._rmtag_cmd = self._create_remove_command()
         self._cleartags_cmd = self._create_clear_command()
         self._listtags_cmd = self._create_list_command()
+        self.config.add({'auto': False, 'album_tags': None, 'item_tags': None})
+        self.register_listener('album_imported', self._on_album_imported)
+        self.register_listener('item_imported', self._on_item_imported)
 
     def commands(self):
         return [self._addtag_cmd,
@@ -79,11 +83,7 @@ class UserTagsPlugin(BeetsPlugin):
             return
 
         for model in models:
-            tags = self.get_tags(model)
-            tags.extend(new_tags)
-            tags = sorted(list(set(tags)))
-            model.update({UserTagsPlugin.FIELD: '|'.join(tags)})
-            self._update_model(model)
+            self._add_tags(model, new_tags)
             if not opts.prompt: print("  {}".format(model))
 
     def remove_tags(self, lib, opts, args):
@@ -176,6 +176,31 @@ class UserTagsPlugin(BeetsPlugin):
         cmd.func = self.list_tags
         cmd.parser.add_album_option()
         return cmd
+
+    def _on_album_imported(self, lib: Library, album: Album):
+        if not self.config['auto']:
+            return
+        album_tags = self._sanitize_tags(self.config['album_tags'].as_str_seq())
+        if album_tags:
+            self._add_tags(album, album_tags)
+        item_tags = self._sanitize_tags(self.config['item_tags'].as_str_seq())
+        if item_tags:
+            for __, item in enumerate(album.items()):
+                self._add_tags(item, item_tags)
+
+    def _on_item_imported(self, lib: Library, item: Item):
+        if not self.config['auto']:
+            return
+        item_tags = self._sanitize_tags(self.config['item_tags'].as_str_seq())
+        if item_tags:
+            self._add_tags(item, item_tags)
+
+    def _add_tags(self, model: LibModel, new_tags: [str]):
+        tags = self.get_tags(model)
+        tags.extend(new_tags)
+        tags = sorted(list(set(tags)))
+        model.update({UserTagsPlugin.FIELD: '|'.join(tags)})
+        self._update_model(model)
 
     @staticmethod
     def _add_tag_option(parser: OptionParser):
