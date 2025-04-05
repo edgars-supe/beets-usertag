@@ -1,10 +1,9 @@
 import unittest
-from typing import Union
 
 import beets
 
 from beetsplug.usertag import UserTagsPlugin
-from beets.library import Album, Item, LibModel, Library
+from beets.library import LibModel, Library
 from beets.test.helper import TestHelper
 from optparse import Values
 from unittest.mock import patch
@@ -49,82 +48,57 @@ class UserTagsTest(TestHelper, unittest.TestCase):
 
     def test_adding_tag_item(self):
         self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[_ITEM_TAG])
+        self._assert_item_tags(expected=[_ITEM_TAG])
 
     def test_adding_tag_album(self):
         self.subject.add_tags(self.lib, _ALBUM_OPTS, self.album.album)
-
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(album, expected=[_ALBUM_TAG])
+        self._assert_album_tags(expected=[_ALBUM_TAG])
 
     def test_adding_tag_to_item_does_not_change_album(self):
         self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[_ITEM_TAG])
-
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(album, expected=[])
+        self._assert_item_tags(expected=[_ITEM_TAG])
+        self._assert_album_tags(expected=[])
 
     def test_adding_tag_to_album_does_not_change_item(self):
         self.subject.add_tags(self.lib, _ALBUM_OPTS, self.album.album)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
-
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(album, expected=[_ALBUM_TAG])
+        self._assert_item_tags(expected=[])
+        self._assert_album_tags(expected=[_ALBUM_TAG])
 
     def test_adding_tag_item_multiple_times(self):
         self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[_ITEM_TAG])
+        self._assert_item_tags(expected=[_ITEM_TAG])
 
         self.subject.remove_tags(self.lib, _ITEM_OPTS, self.item.title)
 
         self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, [_ITEM_TAG])
+        self._assert_item_tags(expected=[_ITEM_TAG])
 
     def test_invalid_tags_are_stripped_when_adding(self):
         item_opts = _create_opts(
             album=False, tags=['baa', '', 'bab', ' ', 'bac', '   ', 'bad', '\t', 'bae', '	', 'baf'])
         self.subject.add_tags(self.lib, item_opts, self.item.title)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=['baa', 'bab', 'bac', 'bad', 'bae', 'baf'])
+        self._assert_item_tags(expected=['baa', 'bab', 'bac', 'bad', 'bae', 'baf'])
 
     def test_repeated_tags_are_ignored(self):
         item_opts = _create_opts(album=False, tags=['baa', 'bab', 'baa', 'bac', 'baa'])
         self.subject.add_tags(self.lib, item_opts, self.item.title)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=['baa', 'bab', 'bac'])
+        self._assert_item_tags(expected=['baa', 'bab', 'bac'])
 
     @with_item_tags('baa', 'bab', 'bac')
     def test_adding_existing_tags(self):
         item_opts = _create_opts(album=False, tags=['baa', 'bad', 'bae', 'bab'])
         self.subject.add_tags(self.lib, item_opts, self.item.title)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=['baa', 'bab', 'bac', 'bad', 'bae'])
+        self._assert_item_tags(expected=['baa', 'bab', 'bac', 'bad', 'bae'])
 
     @patch('beets.ui.input_yn', return_value=True)
     def test_adding_prompt_yes(self, mock):
         self.subject.add_tags(self.lib, _ITEM_OPTS_PROMPT, self.item.title)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[_ITEM_TAG])
+        self._assert_item_tags(expected=[_ITEM_TAG])
 
     @patch('beets.ui.input_yn', return_value=False)
     def test_adding_prompt_no(self, mock):
         self.subject.add_tags(self.lib, _ITEM_OPTS_PROMPT, self.item.title)
-
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
+        self._assert_item_tags(expected=[])
 
     @patch.object(Library, 'items')
     def test_check_valid_tags_when_adding(self, mock_items_query):
@@ -139,14 +113,12 @@ class UserTagsTest(TestHelper, unittest.TestCase):
     @with_item_tags(_ITEM_TAG)
     def test_removing_tag_item(self):
         self.subject.remove_tags(self.lib, _ITEM_OPTS, self.item.title)
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
+        self._assert_item_tags(expected=[])
 
     @with_album_tags(_ALBUM_TAG)
     def test_removing_tag_album(self):
         self.subject.remove_tags(self.lib, _ALBUM_OPTS, self.album.album)
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(album, expected=[])
+        self._assert_album_tags(expected=[])
 
     @with_item_tags('foo')
     @with_album_tags('foo')
@@ -154,10 +126,8 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item_opts = _create_opts(album=False, tags=['foo'])
         self.subject.remove_tags(self.lib, item_opts, self.item.title)
 
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(album, expected=['foo'])
+        self._assert_item_tags(expected=[])
+        self._assert_album_tags(expected=['foo'])
 
     @with_item_tags('foo')
     @with_album_tags('foo')
@@ -165,18 +135,15 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         album_opts = _create_opts(album=True, tags=['foo'])
         self.subject.remove_tags(self.lib, album_opts, self.album.album)
 
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=['foo'])
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(album, expected=[])
+        self._assert_item_tags(expected=['foo'])
+        self._assert_album_tags(expected=[])
 
     @with_item_tags('baa', 'bab', 'bac', 'bad')
     def test_removing_subset(self):
         item_opts = _create_opts(album=False, tags=['baa', 'bac'])
         self.subject.remove_tags(self.lib, item_opts, self.item.title)
 
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=['bab', 'bad'])
+        self._assert_item_tags(expected=['bab', 'bad'])
 
     @with_item_tags('baa', 'bab', 'bac', 'bad', 'bae', 'baf')
     def test_invalid_tags_are_stripped_when_removing(self):
@@ -185,22 +152,19 @@ class UserTagsTest(TestHelper, unittest.TestCase):
             tags=['baa', '', 'bab', ' ', 'bac', '   ', 'bad', '\t', 'bae', '	', 'baf'])
         self.subject.remove_tags(self.lib, item_opts, self.item.title)
 
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
+        self._assert_item_tags(expected=[])
 
     @with_item_tags(_ITEM_TAG)
     @patch('beets.ui.input_yn', return_value=True)
     def test_removing_prompt_yes(self, mock):
         self.subject.remove_tags(self.lib, _ITEM_OPTS_PROMPT, self.item.title)
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
+        self._assert_item_tags(expected=[])
 
     @with_item_tags(_ITEM_TAG)
     @patch('beets.ui.input_yn', return_value=False)
     def test_removing_prompt_no(self, mock):
         self.subject.remove_tags(self.lib, _ITEM_OPTS_PROMPT, self.item.title)
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[_ITEM_TAG])
+        self._assert_item_tags(expected=[_ITEM_TAG])
 
     @patch.object(Library, 'items')
     def test_check_valid_tags_when_removing(self, mock_items_query):
@@ -216,51 +180,43 @@ class UserTagsTest(TestHelper, unittest.TestCase):
     def test_clearing_tags_item(self):
         clear_opts = _create_opts(album=False, tags=[])
         self.subject.clear_tags(self.lib, clear_opts, self.item.title)
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
+        self._assert_item_tags(expected=[])
 
     @with_album_tags('foo', 'bar')
     def test_clearing_tags_album(self):
         clear_opts = _create_opts(album=True, tags=[])
         self.subject.clear_tags(self.lib, clear_opts, self.album.album)
-        album = self.lib.get_item(self.album.id)
-        self._assert_user_tags(album, expected=[])
+        self._assert_album_tags(expected=[])
 
     @with_item_tags('foo', 'bar')
     @with_album_tags('foo', 'bar')
     def test_clearing_item_tags_does_not_change_album(self):
         clear_opts = _create_opts(album=False, tags=[])
         self.subject.clear_tags(self.lib, clear_opts, self.item.title)
-        item = self.lib.get_item(self.item.id)
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(item, expected=[])
-        self._assert_user_tags(album, expected=['bar', 'foo'])
+        self._assert_item_tags(expected=[])
+        self._assert_album_tags(expected=['bar', 'foo'])
 
     @with_item_tags('foo', 'bar')
     @with_album_tags('foo', 'bar')
     def test_clearing_album_tags_does_not_change_item(self):
         clear_opts = _create_opts(album=True, tags=[])
         self.subject.clear_tags(self.lib, clear_opts, self.album.album)
-        item = self.lib.get_item(self.item.id)
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(item, expected=['bar', 'foo'])
-        self._assert_user_tags(album, expected=[])
+        self._assert_item_tags(expected=['bar', 'foo'])
+        self._assert_album_tags(expected=[])
 
     @with_item_tags('foo', 'bar')
     @patch('beets.ui.input_yn', return_value=True)
     def test_clearing_prompt_yes(self, mock):
         clear_opts = _create_opts(album=False, tags=[], prompt=True)
         self.subject.clear_tags(self.lib, clear_opts, self.item.title)
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
+        self._assert_item_tags(expected=[])
 
     @with_item_tags('foo', 'bar')
     @patch('beets.ui.input_yn', return_value=False)
     def test_clearing_prompt_no(self, mock):
         clear_opts = _create_opts(album=False, tags=[], prompt=True)
         self.subject.clear_tags(self.lib, clear_opts, self.item.title)
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=['bar', 'foo'])
+        self._assert_item_tags(expected=['bar', 'foo'])
 
     # endregion
 
@@ -270,36 +226,31 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         self._init_config(auto = True, album_tags = ['baa', 'bab'], item_tags = ['bac', 'bad'])
         self.subject._on_album_imported(self.lib, self.album)
 
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(album, expected=['baa', 'bab'])
+        self._assert_album_tags(expected=['baa', 'bab'])
 
     def test_album_tags_not_added_on_import(self):
         self._init_config(auto = False, album_tags = ['foo'])
         self.subject._on_album_imported(self.lib, self.album)
 
-        album = self.lib.get_album(self.album.id)
-        self._assert_user_tags(album, expected=[])
+        self._assert_album_tags(expected=[])
 
     def test_item_tags_added_on_import(self):
         self._init_config(auto = True, album_tags = ['baa', 'bab'], item_tags = ['bac', 'bad'])
         self.subject._on_item_imported(self.lib, self.item)
 
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=['bac', 'bad'])
+        self._assert_item_tags(expected=['bac', 'bad'])
 
     def test_item_tags_not_added_on_import(self):
         self._init_config(auto=False, item_tags=['foo'])
         self.subject._on_item_imported(self.lib, self.item)
 
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=[])
+        self._assert_item_tags(expected=[])
 
     def test_item_tags_added_when_album_imported(self):
         self._init_config(auto = True, album_tags = ['baa', 'bab'], item_tags = ['bac', 'bad'])
         self.subject._on_album_imported(self.lib, self.album)
 
-        item = self.lib.get_item(self.item.id)
-        self._assert_user_tags(item, expected=['bac', 'bad'])
+        self._assert_item_tags(expected=['bac', 'bad'])
 
     # endregion
 
@@ -310,6 +261,14 @@ class UserTagsTest(TestHelper, unittest.TestCase):
     def _create_items(self):
         self.item = self.add_item()
         self.album = self.lib.add_album([self.item])
+
+    def _assert_item_tags(self, expected: []):
+        item = self.lib.get_item(self.item.id)
+        self._assert_user_tags(item, expected)
+
+    def _assert_album_tags(self, expected: []):
+        album = self.lib.get_album(self.album.id)
+        self._assert_user_tags(album, expected)
 
     def _assert_user_tags(self, model: LibModel, expected: []):
         self.assertEqual(expected, UserTagsPlugin.get_tags(model))
