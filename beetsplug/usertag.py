@@ -32,6 +32,7 @@ from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand
 from beets.dbcore import types
 
+_DELIMITER = '|'
 
 class UserTagsPlugin(BeetsPlugin):
     """UserTags plugin to support user defined tags"""
@@ -63,12 +64,12 @@ class UserTagsPlugin(BeetsPlugin):
             tags = model.get(UserTagsPlugin.FIELD, None)
         else:
             tags = None
-        return tags.split('|') if tags else []
+        return tags.split(_DELIMITER) if tags else []
 
     def add_tags(self, lib, opts, args):
         new_tags = self._sanitize_tags(opts.tags or [])
         if not new_tags:
-            print("Please specify at least one valid tag to add!\n")
+            self._log.error("Please specify at least one valid tag to add!\n")
             self._addtag_cmd.print_help()
             return
 
@@ -76,7 +77,7 @@ class UserTagsPlugin(BeetsPlugin):
         if not self._check_models(models, opts.album): return
 
         if not self._prompt_if_required(
-                opts, models,
+                opts.prompt, models,
                 prompt_text="This will add the tag(s) {} to the following {}:"
                         .format(', '.join(new_tags), "album(s)" if opts.album else "track(s)"),
                 default_text="Adding tag(s) {} to:".format(', '.join(new_tags))):
@@ -84,12 +85,12 @@ class UserTagsPlugin(BeetsPlugin):
 
         for model in models:
             self._add_tags(model, new_tags)
-            if not opts.prompt: print("  {}".format(model))
+            if not opts.prompt: self._log.info("  {}".format(model))
 
     def remove_tags(self, lib, opts, args):
         remove_tags: [str] = self._sanitize_tags(opts.tags or [])
         if not remove_tags:
-            print("Please specify at least one valid tag to remove!\n")
+            self._log.warn("Please specify at least one valid tag to remove!\n")
             self._rmtag_cmd.print_help()
             return
 
@@ -97,7 +98,7 @@ class UserTagsPlugin(BeetsPlugin):
         if not self._check_models(models, opts.album): return
 
         if not self._prompt_if_required(
-                opts, models,
+                opts.prompt, models,
                 prompt_text="This will remove the tag(s) {} from the following {}:"
                         .format(', '.join(remove_tags), "album(s)" if opts.album else "track(s)"),
                 default_text="Removing tag(s) {} from:".format(', '.join(remove_tags))):
@@ -106,17 +107,17 @@ class UserTagsPlugin(BeetsPlugin):
         for model in models:
             tags = self.get_tags(model)
             tags = [tag for tag in tags if tag not in remove_tags]
-            tags_field = '|'.join(tags) if tags else None
+            tags_field = _DELIMITER.join(tags) if tags else None
             model.update({UserTagsPlugin.FIELD: tags_field})
             self._update_model(model)
-            if not opts.prompt: print('  {}'.format(model))
+            if not opts.prompt: self._log.info('  {}'.format(model))
 
     def clear_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
         if not self._check_models(models, opts.album): return
 
         if not self._prompt_if_required(
-                opts, models,
+                opts.prompt, models,
                 prompt_text="This will remove ALL tags from the following {}:"
                         .format("album(s)" if opts.album else "track(s)"),
                 default_text="Removing ALL tags from:"):
@@ -125,7 +126,7 @@ class UserTagsPlugin(BeetsPlugin):
         for model in models:
             model.update({UserTagsPlugin.FIELD: None})
             self._update_model(model)
-            if not opts.prompt: print("  {}".format(model))
+            if not opts.prompt: self._log.info("  {}".format(model))
 
     def list_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
@@ -183,10 +184,12 @@ class UserTagsPlugin(BeetsPlugin):
         album_tags = self._sanitize_tags(self.config['album_tags'].as_str_seq())
         if album_tags:
             self._add_tags(album, album_tags)
+            self._log.debug("Added tag(s) {} to album on import: {}".format(album_tags, album))
         item_tags = self._sanitize_tags(self.config['item_tags'].as_str_seq())
         if item_tags:
             for __, item in enumerate(album.items()):
                 self._add_tags(item, item_tags)
+                self._log.debug("Added tag(s) {} to item on import: {}".format(item_tags, item))
 
     def _on_item_imported(self, lib: Library, item: Item):
         if not self.config['auto']:
@@ -194,12 +197,13 @@ class UserTagsPlugin(BeetsPlugin):
         item_tags = self._sanitize_tags(self.config['item_tags'].as_str_seq())
         if item_tags:
             self._add_tags(item, item_tags)
+            self._log.debug("Added tag(s) {} to item on import: {}".format(item_tags, item))
 
     def _add_tags(self, model: LibModel, new_tags: [str]):
         tags = self.get_tags(model)
         tags.extend(new_tags)
         tags = sorted(list(set(tags)))
-        model.update({UserTagsPlugin.FIELD: '|'.join(tags)})
+        model.update({UserTagsPlugin.FIELD: _DELIMITER.join(tags)})
         self._update_model(model)
 
     @staticmethod
@@ -224,10 +228,9 @@ class UserTagsPlugin(BeetsPlugin):
         else:
             return lib.items(args)
 
-    @staticmethod
-    def _check_models(models: [LibModel], album: bool) -> bool:
+    def _check_models(self, models: [LibModel], album: bool) -> bool:
         if not models:
-            print("Query returned no {}".format("albums" if album else "tracks"))
+            self._log.info("Query returned no {}".format("albums" if album else "tracks"))
             return False
         else:
             return True
@@ -247,14 +250,14 @@ class UserTagsPlugin(BeetsPlugin):
     def _is_tag_valid(tag: str) -> bool:
         return bool(tag.strip())
 
-    @staticmethod
-    def _prompt_if_required(opts, models: [LibModel], prompt_text: str, default_text: str) -> bool:
-        if opts.prompt:
-            print(prompt_text)
+    def _prompt_if_required(self, prompt: bool, models: [LibModel], prompt_text: str, default_text: str) -> bool:
+        if prompt:
+            self._log.info(prompt_text)
             for model in models:
-                print("  {}".format(model))
+                self._log.info("  {}".format(model))
             if not beets.ui.input_yn("Continue? (Y/n)"):
+                self._log.info("No changes made.")
                 return False
         else:
-            print(default_text)
+            self._log.info(default_text)
         return True
