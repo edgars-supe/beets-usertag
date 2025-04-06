@@ -1,24 +1,5 @@
 """
-UserTags is a plugin for beets that allows users to mark songs in their library
-by personalized tags. These usertags can in turn be used to filter the library
-and as a form of virtual folder system.
-
-The UserTags plugin defines a flexible attribute "usertags" for beets items.
-usertags can be added from the command line interface by
-
-beet addtag <id> <usertag>[|<usertag>]
-
-Individual tags can be removed in a similar way by
-
-beet rmtag <id> <usertag>
-
-Removing multiple tags is currently not supported.
-
-Filtering the library by tag works in the exact same way as with other fields:
-
-beet ls usertags:<filtertag>
-
-copyright 2015 by Ingo Fruend (github@ingofruend.net)
+Copyright 2015 Ingo Fruend (github@ingofruend.net)
 """
 from __future__ import (division, absolute_import, print_function,
                         unicode_literals)
@@ -86,6 +67,10 @@ class UserTagsPlugin(BeetsPlugin):
         for model in models:
             self._add_tags(model, new_tags)
             if not opts.prompt: self._log.info("  {}".format(model))
+            if opts.inherit and isinstance(model, Album):
+                self._log.info(f"Adding tags {new_tags} to items of {model}")
+                for item in model.items():
+                    self._add_tags(item, new_tags)
 
     def remove_tags(self, lib, opts, args):
         remove_tags: [str] = self._sanitize_tags(opts.tags or [])
@@ -105,12 +90,12 @@ class UserTagsPlugin(BeetsPlugin):
             return
 
         for model in models:
-            tags = self.get_tags(model)
-            tags = [tag for tag in tags if tag not in remove_tags]
-            tags_field = _DELIMITER.join(tags) if tags else None
-            model.update({UserTagsPlugin.FIELD: tags_field})
-            self._update_model(model)
+            self._remove_tags(model, remove_tags)
             if not opts.prompt: self._log.info('  {}'.format(model))
+            if opts.inherit and isinstance(model, Album):
+                self._log.info(f"Removing tags {remove_tags} from items of {model}")
+                for item in model.items():
+                    self._remove_tags(item, remove_tags)
 
     def clear_tags(self, lib, opts, args):
         models = self._get_models(lib, opts.album, args)
@@ -146,6 +131,7 @@ class UserTagsPlugin(BeetsPlugin):
         cmd.func = self.add_tags
         self._add_tag_option(cmd.parser)
         self._add_prompt_option(cmd.parser)
+        self._add_inherit_option(cmd.parser)
         cmd.parser.add_album_option()
         return cmd
 
@@ -157,6 +143,7 @@ class UserTagsPlugin(BeetsPlugin):
         cmd.func = self.remove_tags
         self._add_tag_option(cmd.parser)
         self._add_prompt_option(cmd.parser)
+        self._add_inherit_option(cmd.parser)
         cmd.parser.add_album_option()
         return cmd
 
@@ -187,7 +174,7 @@ class UserTagsPlugin(BeetsPlugin):
             self._log.debug("Added tag(s) {} to album on import: {}".format(album_tags, album))
         item_tags = self._sanitize_tags(self.config['item_tags'].as_str_seq())
         if item_tags:
-            for __, item in enumerate(album.items()):
+            for item in album.items():
                 self._add_tags(item, item_tags)
                 self._log.debug("Added tag(s) {} to item on import: {}".format(item_tags, item))
 
@@ -206,6 +193,13 @@ class UserTagsPlugin(BeetsPlugin):
         model.update({UserTagsPlugin.FIELD: _DELIMITER.join(tags)})
         self._update_model(model)
 
+    def _remove_tags(self, model, remove_tags):
+        tags = self.get_tags(model)
+        tags = [tag for tag in tags if tag not in remove_tags]
+        tags_field = _DELIMITER.join(tags) if tags else None
+        model.update({UserTagsPlugin.FIELD: tags_field})
+        self._update_model(model)
+
     @staticmethod
     def _add_tag_option(parser: OptionParser):
         parser.add_option(
@@ -219,6 +213,14 @@ class UserTagsPlugin(BeetsPlugin):
             '--prompt', '-p',
             action='store_true', default=False,
             dest='prompt', help='prompt user for confirmation before making changes'
+        )
+
+    @staticmethod
+    def _add_inherit_option(parser: OptionParser):
+        parser.add_option(
+            '--inherit', '-i',
+            action='store_true', default=False,
+            dest='inherit', help='when changing album tags, make the same changes for its items'
         )
 
     @staticmethod
