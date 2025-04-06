@@ -65,6 +65,7 @@ beet addtag <query> -t <tag> [-t <other-tag>]
 | `-t <tag>`, `--tag <tag>` | Tag(s) to add to items matching the given query. Additional tags require new flags.                     |
 | `-a`, `--album`           | (Optional) Whether the query should match albums instead of tracks. Tracks will not be changed.         |
 | `-p`, `--prompt`          | (Optional) If set, you will be shown the list of items that will be changed and asked for confirmation. |
+| `-i`, `--inherit`         | (Optional) Used only if `-a` is set. If set, tags will be added to the album's items as well.           | 
 
 This command also has an alias - `adt`.
 
@@ -74,11 +75,12 @@ This command also has an alias - `adt`.
 beet rmtag <query> -t <tag> [-t <other-tag>]
 ```
 
-| Flag                      | Description                                                                                             |
-|---------------------------|---------------------------------------------------------------------------------------------------------|
-| `-t <tag>`, `--tag <tag>` | Tag(s) to remove from items matching the given query. Additional tags require new flags.                |
-| `-a`, `--album`           | (Optional) Whether the query should match albums instead of tracks. Tracks will not be changed.         |
-| `-p`, `--prompt`          | (Optional) If set, you will be shown the list of items that will be changed and asked for confirmation. |
+| Flag                      | Description                                                                                                 |
+|---------------------------|-------------------------------------------------------------------------------------------------------------|
+| `-t <tag>`, `--tag <tag>` | Tag(s) to remove from items matching the given query. Additional tags require new flags.                    |
+| `-a`, `--album`           | (Optional) Whether the query should match albums instead of tracks. Tracks will not be changed.             |
+| `-p`, `--prompt`          | (Optional) If set, you will be shown the list of items that will be changed and asked for confirmation.     |
+| `-i`, `--inherit`         | (Optional) Used only if `-a` is set. If set, the given tags will be removed from the album's items as well. |
 
 This command also has an alias - `rmt`.
 

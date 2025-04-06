@@ -11,8 +11,8 @@ from unittest.mock import patch
 _ITEM_TAG = 'item_tag'
 _ALBUM_TAG = 'album_tag'
 
-def _create_opts(album: bool, tags: [str], prompt: bool=False) -> Values:
-    return Values({'album': album, 'tags': tags, 'prompt': prompt})
+def _create_opts(album: bool, tags: [str], prompt: bool=False, inherit: bool=False) -> Values:
+    return Values({'album': album, 'tags': tags, 'prompt': prompt, 'inherit': inherit})
 
 _ITEM_OPTS = _create_opts(album=False, tags=[_ITEM_TAG])
 _ITEM_OPTS_PROMPT = _create_opts(album=False, tags=[_ITEM_TAG], prompt=True)
@@ -62,6 +62,19 @@ class UserTagsTest(TestHelper, unittest.TestCase):
     def test_adding_tag_to_album_does_not_change_item(self):
         self.subject.add_tags(self.lib, _ALBUM_OPTS, self.album.album)
         self._assert_item_tags(expected=[])
+        self._assert_album_tags(expected=[_ALBUM_TAG])
+
+    def test_adding_tag_to_album_updates_items_when_inherit(self):
+        opts = _create_opts(album=True, tags=[_ALBUM_TAG], inherit=True)
+        self.subject.add_tags(self.lib, opts, self.album.album)
+        self._assert_item_tags(expected=[_ALBUM_TAG])
+        self._assert_album_tags(expected=[_ALBUM_TAG])
+
+    @with_item_tags('baa', 'bab')
+    def test_adding_tag_to_album_with_inherit_does_not_change_other_tags_on_item(self):
+        opts = _create_opts(album=True, tags=[_ALBUM_TAG], inherit=True)
+        self.subject.add_tags(self.lib, opts, self.album.album)
+        self._assert_item_tags(expected=[_ALBUM_TAG, 'baa', 'bab'])
         self._assert_album_tags(expected=[_ALBUM_TAG])
 
     def test_adding_tag_item_multiple_times(self):
@@ -137,6 +150,22 @@ class UserTagsTest(TestHelper, unittest.TestCase):
 
         self._assert_item_tags(expected=['foo'])
         self._assert_album_tags(expected=[])
+
+    @with_item_tags('baa', 'bab')
+    @with_album_tags('baa', 'bab')
+    def test_removing_tag_from_album_updates_items_when_inherit(self):
+        opts = _create_opts(album=True, tags=['baa', 'bab'], inherit=True)
+        self.subject.remove_tags(self.lib, opts, self.album.album)
+        self._assert_item_tags(expected=[])
+        self._assert_album_tags(expected=[])
+
+    @with_item_tags('baa', 'bab', 'bac')
+    @with_album_tags('baa', 'bab')
+    def test_removing_tag_from_album_with_inherit_does_not_change_other_tags_on_item(self):
+        opts = _create_opts(album=True, tags=['bab'], inherit=True)
+        self.subject.remove_tags(self.lib, opts, self.album.album)
+        self._assert_item_tags(expected=['baa', 'bac'])
+        self._assert_album_tags(expected=['baa'])
 
     @with_item_tags('baa', 'bab', 'bac', 'bad')
     def test_removing_subset(self):
