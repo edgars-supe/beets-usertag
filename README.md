@@ -90,6 +90,8 @@ This command also has an alias - `rmt`.
 beet cleartags [-a] <query>
 ```
 
+This command removes all tags on items/albums that match the given query.
+
 | Flag                      | Description                                                                                             |
 |---------------------------|---------------------------------------------------------------------------------------------------------|
 | `-a`, `--album`           | (Optional) Whether the query should match albums instead of tracks. Tracks will not be changed.         |
