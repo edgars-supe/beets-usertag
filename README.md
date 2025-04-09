@@ -22,7 +22,7 @@ in beets' database.
 First, install the package with `pip`:
 
 ```
-pip install git+https://github.com/edgars-supe/beets-usertag.git
+pip install beets-usertag
 ```
 
 Then, add `usertag` to the list of plugins in beets' `config.yaml` file. This is
