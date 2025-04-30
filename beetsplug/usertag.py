@@ -127,7 +127,7 @@ class UserTagsPlugin(BeetsPlugin):
         cmd = Subcommand(
             'addtag',
             help='add user-defined tags',
-            aliases='adt')
+            aliases=('adt',))
         cmd.func = self.add_tags
         self._add_tag_option(cmd.parser)
         self._add_prompt_option(cmd.parser)
@@ -139,7 +139,7 @@ class UserTagsPlugin(BeetsPlugin):
         cmd = Subcommand(
             'rmtag',
             help='remove user-defined tags',
-            aliases='rmt')
+            aliases=('rmt',))
         cmd.func = self.remove_tags
         self._add_tag_option(cmd.parser)
         self._add_prompt_option(cmd.parser)
@@ -160,7 +160,7 @@ class UserTagsPlugin(BeetsPlugin):
         cmd = Subcommand(
             'listtags',
             help='list all user-defined tags on tracks',
-            aliases='lst')
+            aliases=('lst',))
         cmd.func = self.list_tags
         cmd.parser.add_album_option()
         return cmd
