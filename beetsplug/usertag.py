@@ -38,7 +38,7 @@ class UserTagsPlugin(BeetsPlugin):
                 self._listtags_cmd]
 
     @staticmethod
-    def get_tags(model: LibModel) -> [str]:
+    def get_tags(model: LibModel) -> list[str]:
         if isinstance(model, Item):
             tags = model.get(UserTagsPlugin.FIELD, default=None, with_album=False)
         elif isinstance(model, Album):
@@ -73,7 +73,7 @@ class UserTagsPlugin(BeetsPlugin):
                     self._add_tags(item, new_tags)
 
     def remove_tags(self, lib, opts, args):
-        remove_tags: [str] = self._sanitize_tags(opts.tags or [])
+        remove_tags = self._sanitize_tags(opts.tags or [])
         if not remove_tags:
             self._log.warn("Please specify at least one valid tag to remove!\n")
             self._rmtag_cmd.print_help()
@@ -186,7 +186,7 @@ class UserTagsPlugin(BeetsPlugin):
             self._add_tags(item, item_tags)
             self._log.debug("Added tag(s) {} to item on import: {}".format(item_tags, item))
 
-    def _add_tags(self, model: LibModel, new_tags: [str]):
+    def _add_tags(self, model: LibModel, new_tags: list[str]):
         tags = self.get_tags(model)
         tags.extend(new_tags)
         tags = sorted(list(set(tags)))
@@ -224,13 +224,13 @@ class UserTagsPlugin(BeetsPlugin):
         )
 
     @staticmethod
-    def _get_models(lib: Library, album: bool, args: [str]) -> [LibModel]:
+    def _get_models(lib: Library, album: bool, args: list[str]) -> list[LibModel]:
         if album:
-            return lib.albums(args)
+            return list(lib.albums(args))
         else:
-            return lib.items(args)
+            return list(lib.items(args))
 
-    def _check_models(self, models: [LibModel], album: bool) -> bool:
+    def _check_models(self, models: list[LibModel], album: bool) -> bool:
         if not models:
             self._log.info("Query returned no {}".format("albums" if album else "tracks"))
             return False
@@ -245,14 +245,14 @@ class UserTagsPlugin(BeetsPlugin):
             model.store(inherit=False)
 
     @staticmethod
-    def _sanitize_tags(tags: [str]) -> [str]:
+    def _sanitize_tags(tags: list[str]) -> list[str]:
         return [tag for tag in tags if UserTagsPlugin._is_tag_valid(tag)]
 
     @staticmethod
     def _is_tag_valid(tag: str) -> bool:
         return bool(tag.strip())
 
-    def _prompt_if_required(self, prompt: bool, models: [LibModel], prompt_text: str, default_text: str) -> bool:
+    def _prompt_if_required(self, prompt: bool, models: list[LibModel], prompt_text: str, default_text: str) -> bool:
         if prompt:
             self._log.info(prompt_text)
             for model in models:

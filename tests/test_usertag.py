@@ -11,7 +11,7 @@ from unittest.mock import patch
 _ITEM_TAG = 'item_tag'
 _ALBUM_TAG = 'album_tag'
 
-def _create_opts(album: bool, tags: [str], prompt: bool=False, inherit: bool=False) -> Values:
+def _create_opts(album: bool, tags: list[str], prompt: bool=False, inherit: bool=False) -> Values:
     return Values({'album': album, 'tags': tags, 'prompt': prompt, 'inherit': inherit})
 
 _ITEM_OPTS = _create_opts(album=False, tags=[_ITEM_TAG])
@@ -118,6 +118,13 @@ class UserTagsTest(TestHelper, unittest.TestCase):
         item_opts = _create_opts(album=False, tags=['', ' ', '   ', '\t', '	'])
         self.subject.add_tags(self.lib, item_opts, self.item.title)
         mock_items_query.assert_not_called()
+
+    def test_adding_tag_twice(self):
+        self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
+        self._assert_item_tags(expected=[_ITEM_TAG])
+
+        self.subject.add_tags(self.lib, _ITEM_OPTS, self.item.title)
+        self._assert_item_tags(expected=[_ITEM_TAG])
 
     # endregion
 
@@ -284,20 +291,20 @@ class UserTagsTest(TestHelper, unittest.TestCase):
     # endregion
 
     @staticmethod
-    def _init_config(auto: bool, album_tags: [str] = None, item_tags: [str] = None):
+    def _init_config(auto: bool, album_tags: list[str] = None, item_tags: list[str] = None):
         beets.config['usertag'].set({'auto': auto, 'album_tags': album_tags or [], 'item_tags': item_tags or []})
 
     def _create_items(self):
         self.item = self.add_item()
         self.album = self.lib.add_album([self.item])
 
-    def _assert_item_tags(self, expected: []):
+    def _assert_item_tags(self, expected: list[str]):
         item = self.lib.get_item(self.item.id)
         self._assert_user_tags(item, expected)
 
-    def _assert_album_tags(self, expected: []):
+    def _assert_album_tags(self, expected: list[str]):
         album = self.lib.get_album(self.album.id)
         self._assert_user_tags(album, expected)
 
-    def _assert_user_tags(self, model: LibModel, expected: []):
+    def _assert_user_tags(self, model: LibModel, expected: list[str]):
         self.assertEqual(expected, UserTagsPlugin.get_tags(model))
