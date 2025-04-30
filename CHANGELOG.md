@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.1 - 2025-04-30
+
+### Fixed
+
+* Fixed aliases for commands. (#30)
+
 ## v1.0.0 - 2025-04-06
 
 ### Added
